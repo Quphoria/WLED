@@ -77,6 +77,8 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol);
 void handleArtnetPollReply(IPAddress ipAddress);
 void prepareArtnetPollReply(ArtPollReply* reply);
 void sendArtnetPollReply(ArtPollReply* reply, IPAddress ipAddress, uint16_t portAddress);
+uint8_t getMaxNumLEDsPerUniverse();
+void parseLedPerUniverseString(const char* led_str);
 
 //file.cpp
 bool handleFileRead(AsyncWebServerRequest*, String path);

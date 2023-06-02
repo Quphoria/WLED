@@ -54,7 +54,24 @@
 		gId("GR").value=b;
 	}
 	function SP(){var p = d.Sf.DI.value; gId("xp").style.display = (p > 0)?"none":"block"; if (p > 0) d.Sf.EP.value = p;}
-	function SetVal(){switch(parseInt(d.Sf.EP.value)){case 5568: d.Sf.DI.value = 5568; break; case 6454: d.Sf.DI.value = 6454; break; case 4048: d.Sf.DI.value = 4048; break; }; SP();FC();}
+	function DMChange() {
+		const valid_modes = ["4", "6"];
+		const valid_mode = valid_modes.includes(d.Sf.DM.value);
+		gId("CustomLedsPerUniSettings").classList.toggle("hide", !valid_mode);
+		if (!valid_mode) d.Sf.CU.checked = false;
+	}
+	function CUChange() {
+		gId("CustomLedsPerUniNum").classList.toggle("hide", !d.Sf.CU.checked);
+		// hide DMX start address settings when using custom
+		gId("DMXStartAddrSettings").classList.toggle("hide", d.Sf.CU.checked);
+		gId("DMXStartAddrSettingsHidden").classList.toggle("hide", !d.Sf.CU.checked);
+	}
+	function CNChange() {
+		var regex = new RegExp('[^0-9,]', 'g');
+		d.Sf.CN.value = d.Sf.CN.value.replace(regex, "");
+		console.log(d.Sf.CN.value);
+	}
+	function SetVal(){switch(parseInt(d.Sf.EP.value)){case 5568: d.Sf.DI.value = 5568; break; case 6454: d.Sf.DI.value = 6454; break; case 4048: d.Sf.DI.value = 4048; break; }; SP();FC();DMChange();CUChange();CNChange();}
 	function S(){
 		if (window.location.protocol == "file:") {
 			loc = true;
@@ -147,11 +164,16 @@ Multicast: <input type="checkbox" name="EM"><br>
 Start universe: <input name="EU" type="number" min="0" max="63999" required><br>
 <i>Reboot required.</i> Check out <a href="https://github.com/LedFx/LedFx" target="_blank">LedFx</a>!<br>
 Skip out-of-sequence packets: <input type="checkbox" name="ES"><br>
+<div id="DMXStartAddrSettings">
 DMX start address: <input name="DA" type="number" min="1" max="510" required><br>
 DMX segment spacing: <input name="XX" type="number" min="0" max="150" required><br>
+</div>
+<div id="DMXStartAddrSettingsHidden" class="hide">
+DMX start address: 1 <i>(fixed when using Custom Number Of Leds Per Universe)</i>
+</div>
 E1.31 port priority: <input name="PY" type="number" min="0" max="200" required><br>
 DMX mode:
-<select name=DM>
+<select name=DM onchange="DMChange()">
 <option value=0>Disabled</option>
 <option value=1>Single RGB</option>
 <option value=2>Single DRGB</option>
@@ -164,6 +186,12 @@ DMX mode:
 <option value=6>Multi RGBW</option>
 <option value=10>Preset</option>
 </select><br>
+<div id="CustomLedsPerUniSettings" class="hide">
+Custom Number Of Leds Per Universe: <input type="checkbox" name="CU" onchange="CUChange()"><br>
+<div id="CustomLedsPerUniNum" class="hide">
+Leds Per Universe: <input name="CN" type="text" pattern="^[0-9]{1,3}(,[0-9]{1,3})*$" onchange="CNChange()" onkeyup="CNChange()"> e.g. "12,14,10,112"<br>
+</div>
+</div>
 <a href="https://kno.wled.ge/interfaces/e1.31-dmx/" target="_blank">E1.31 info</a><br>
 Timeout: <input name="ET" type="number" min="1" max="65000" required> ms<br>
 Force max brightness: <input type="checkbox" name="FB"><br>

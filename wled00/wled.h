@@ -412,6 +412,10 @@ WLED_GLOBAL bool e131Multicast _INIT(false);                      // multicast o
 WLED_GLOBAL bool e131SkipOutOfSequence _INIT(false);              // freeze instead of flickering
 WLED_GLOBAL uint16_t pollReplyCount _INIT(0);                     // count number of replies for ArtPoll node report
 
+WLED_GLOBAL bool e131CustomNumLedsPerUniverse _INIT(false);       // use a custom number of leds per universe (start address is forced to zero)
+WLED_GLOBAL uint16_t e131NumLedsPerUniverse[E131_MAX_UNIVERSE_COUNT] _INIT({0});  // number of leds per universe, zero = use default value
+WLED_GLOBAL char e131NumLedsPerUniverseStr[E131_MAX_UNIVERSE_COUNT*4] _INIT("");  // string representation of above value
+
 // mqtt
 WLED_GLOBAL unsigned long lastMqttReconnectAttempt _INIT(0);  // used for other periodic tasks too
 #ifndef WLED_DISABLE_MQTT

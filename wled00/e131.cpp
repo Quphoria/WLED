@@ -8,6 +8,8 @@
  * E1.31 handler
  */
 
+uint16_t getLedsPerUniverse(uint8_t universeOffset);
+
 //DDP protocol support, called by handleE131Packet
 //handles RGB data only
 void handleDDPPacket(e131_packet_t* p) {
@@ -269,24 +271,40 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol){
         uint8_t stripBrightness = bri;
         uint16_t previousLeds, dmxOffset, ledsTotal;
 
-        if (previousUniverses == 0) {
-          if (availDMXLen < 1) return;
-          dmxOffset = dataOffset;
-          previousLeds = 0;
-          // First DMX address is dimmer in DMX_MODE_MULTIPLE_DRGB mode.
-          if (DMXMode == DMX_MODE_MULTIPLE_DRGB) {
-            stripBrightness = e131_data[dmxOffset++];
-            ledsTotal = (availDMXLen - 1) / dmxChannelsPerLed;
-          } else {
-            ledsTotal = availDMXLen / dmxChannelsPerLed;
-          }
-        } else {
-          // All subsequent universes start at the first channel.
+        if (e131CustomNumLedsPerUniverse) {
           dmxOffset = (protocol == P_ARTNET) ? 0 : 1;
-          const uint16_t dimmerOffset = (DMXMode == DMX_MODE_MULTIPLE_DRGB) ? 1 : 0;
-          uint16_t ledsInFirstUniverse = (((MAX_CHANNELS_PER_UNIVERSE - DMXAddress) + dmxLenOffset) - dimmerOffset) / dmxChannelsPerLed;
-          previousLeds = ledsInFirstUniverse + (previousUniverses - 1) * ledsPerUniverse;
-          ledsTotal = previousLeds + (dmxChannels / dmxChannelsPerLed);
+          if (DMXMode == DMX_MODE_MULTIPLE_DRGB) {
+            DEBUG_PRINTLN(F("DMX_MODE_MULTIPLE_DRGB not supported with e131CustomNumLedsPerUniverse"));
+            return;
+          }
+          previousLeds = 0;
+          for (uint8_t i = 0; i < previousUniverses; i++) {
+            previousLeds += getLedsPerUniverse(i);
+          }
+          uint8_t maxLedNum = dmxChannels / dmxChannelsPerLed;
+          uint8_t universeLedNum = getLedsPerUniverse(previousUniverses);
+          if (universeLedNum > maxLedNum) universeLedNum = maxLedNum;
+          ledsTotal = previousLeds + universeLedNum;
+        } else {
+          if (previousUniverses == 0) {
+            if (availDMXLen < 1) return;
+            dmxOffset = dataOffset;
+            previousLeds = 0;
+            // First DMX address is dimmer in DMX_MODE_MULTIPLE_DRGB mode.
+            if (DMXMode == DMX_MODE_MULTIPLE_DRGB) {
+              stripBrightness = e131_data[dmxOffset++];
+              ledsTotal = (availDMXLen - 1) / dmxChannelsPerLed;
+            } else {
+              ledsTotal = availDMXLen / dmxChannelsPerLed;
+            }
+          } else {
+            // All subsequent universes start at the first channel.
+            dmxOffset = (protocol == P_ARTNET) ? 0 : 1;
+            const uint16_t dimmerOffset = (DMXMode == DMX_MODE_MULTIPLE_DRGB) ? 1 : 0;
+            uint16_t ledsInFirstUniverse = (((MAX_CHANNELS_PER_UNIVERSE - DMXAddress) + dmxLenOffset) - dimmerOffset) / dmxChannelsPerLed;
+            previousLeds = ledsInFirstUniverse + (previousUniverses - 1) * ledsPerUniverse;
+            ledsTotal = previousLeds + (dmxChannels / dmxChannelsPerLed);
+          }
         }
 
         // All LEDs already have values
@@ -330,6 +348,23 @@ void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol){
   e131NewData = true;
 }
 
+uint16_t getLedsPerUniverse(uint8_t universeOffset) {
+  bool is4Chan = (DMXMode == DMX_MODE_MULTIPLE_RGBW);
+  const uint16_t defaultLedsPerUniverse = is4Chan ? MAX_4_CH_LEDS_PER_UNIVERSE : MAX_3_CH_LEDS_PER_UNIVERSE;
+  if (!e131CustomNumLedsPerUniverse) return defaultLedsPerUniverse;
+
+  const uint16_t ledsPerUniverse = e131NumLedsPerUniverse[universeOffset];
+  if (ledsPerUniverse == 0 || ledsPerUniverse > defaultLedsPerUniverse) return defaultLedsPerUniverse;
+
+  return ledsPerUniverse;
+}
+
+uint8_t getMaxNumLEDsPerUniverse() {
+  bool is4Chan = (DMXMode == DMX_MODE_MULTIPLE_RGBW);
+  const uint16_t defaultLedsPerUniverse = is4Chan ? MAX_4_CH_LEDS_PER_UNIVERSE : MAX_3_CH_LEDS_PER_UNIVERSE;
+  return defaultLedsPerUniverse;
+}
+
 void handleArtnetPollReply(IPAddress ipAddress) {
   ArtPollReply artnetPollReply;
   prepareArtnetPollReply(&artnetPollReply);
@@ -355,25 +390,36 @@ void handleArtnetPollReply(IPAddress ipAddress) {
     case DMX_MODE_MULTIPLE_RGB:
     case DMX_MODE_MULTIPLE_RGBW:
       {
-        bool is4Chan = (DMXMode == DMX_MODE_MULTIPLE_RGBW);
-        const uint16_t dmxChannelsPerLed = is4Chan ? 4 : 3;
-        const uint16_t dimmerOffset = (DMXMode == DMX_MODE_MULTIPLE_DRGB) ? 1 : 0;
-        const uint16_t dmxLenOffset = (DMXAddress == 0) ? 0 : 1; // For legacy DMX start address 0
-        const uint16_t ledsInFirstUniverse = (((MAX_CHANNELS_PER_UNIVERSE - DMXAddress) + dmxLenOffset) - dimmerOffset) / dmxChannelsPerLed;
         const uint16_t totalLen = strip.getLengthTotal();
-
-        if (totalLen > ledsInFirstUniverse) {
-          const uint16_t ledsPerUniverse = is4Chan ? MAX_4_CH_LEDS_PER_UNIVERSE : MAX_3_CH_LEDS_PER_UNIVERSE;
-          const uint16_t remainLED = totalLen - ledsInFirstUniverse;
-
-          endUniverse += (remainLED / ledsPerUniverse);
-
-          if ((remainLED % ledsPerUniverse) > 0) {
+        if (e131CustomNumLedsPerUniverse) {
+          uint16_t remainLED = totalLen - getLedsPerUniverse(0);
+          while (remainLED > 0 && (endUniverse - startUniverse) < (E131_MAX_UNIVERSE_COUNT - 1)) {
             endUniverse++;
+            const uint16_t ledsPerUniverse = getLedsPerUniverse(endUniverse - startUniverse);
+            if (ledsPerUniverse >= remainLED) break;
+            remainLED -= ledsPerUniverse;
           }
+          if (remainLED > 0) DEBUG_PRINTLN(F("Ran out of universes allocating custom leds per universe!"));
+        } else {
+          bool is4Chan = (DMXMode == DMX_MODE_MULTIPLE_RGBW);
+          const uint16_t dmxChannelsPerLed = is4Chan ? 4 : 3;
+          const uint16_t dimmerOffset = (DMXMode == DMX_MODE_MULTIPLE_DRGB) ? 1 : 0;
+          const uint16_t dmxLenOffset = (DMXAddress == 0) ? 0 : 1; // For legacy DMX start address 0
+          const uint16_t ledsInFirstUniverse = (((MAX_CHANNELS_PER_UNIVERSE - DMXAddress) + dmxLenOffset) - dimmerOffset) / dmxChannelsPerLed;
 
-          if ((endUniverse - startUniverse) > E131_MAX_UNIVERSE_COUNT) {
-            endUniverse = startUniverse + E131_MAX_UNIVERSE_COUNT - 1;
+          if (totalLen > ledsInFirstUniverse) {
+            const uint16_t ledsPerUniverse = is4Chan ? MAX_4_CH_LEDS_PER_UNIVERSE : MAX_3_CH_LEDS_PER_UNIVERSE;
+            const uint16_t remainLED = totalLen - ledsInFirstUniverse;
+
+            endUniverse += (remainLED / ledsPerUniverse);
+
+            if ((remainLED % ledsPerUniverse) > 0) {
+              endUniverse++;
+            }
+
+            if ((endUniverse - startUniverse) > E131_MAX_UNIVERSE_COUNT) {
+              endUniverse = startUniverse + E131_MAX_UNIVERSE_COUNT - 1;
+            }
           }
         }
         break;
@@ -526,4 +572,55 @@ void sendArtnetPollReply(ArtPollReply *reply, IPAddress ipAddress, uint16_t port
   notifierUdp.endPacket();
 
   reply->reply_bind_index++;
+}
+
+void parseLedPerUniverseString(const char* led_str) {
+  memset(e131NumLedsPerUniverse, 0, E131_MAX_UNIVERSE_COUNT*sizeof(uint16_t));
+
+  const char *s_ptr = led_str;
+  const uint8_t s_len = strlen(led_str);
+  uint8_t uni_num = 0;
+  while (s_ptr < led_str + s_len) {
+    const char *val_end = strchr(s_ptr, ',');
+    if (val_end == NULL) val_end = led_str + s_len;
+
+    bool valid = true;
+    uint16_t n = 0;
+    for (const char *c = s_ptr; c < val_end; c++) {
+      if (!(*c >= '0' && *c <= '9')) {
+        valid = false;
+        break;
+      }
+      n *= 10;
+      n += *c - '0';
+    }
+    if (!valid) break;
+
+    uint16_t max_n = getMaxNumLEDsPerUniverse();
+    if (n > max_n) n = max_n;
+    
+    e131NumLedsPerUniverse[uni_num++] = n;
+    if (uni_num > E131_MAX_UNIVERSE_COUNT) break; 
+
+    s_ptr = val_end + 1;
+  }
+
+  // Recreate string representation
+  // max 3 digits + comma - last comma + null char
+  char temp_led_per_universe_str[E131_MAX_UNIVERSE_COUNT*4] = "";
+  uint8_t lastNonZeroValue = 0;
+  for (uint8_t i = 0; i < E131_MAX_UNIVERSE_COUNT; i++) {
+    if (e131NumLedsPerUniverse[i] != 0) lastNonZeroValue = i;
+  }
+  if (lastNonZeroValue > 0 || e131NumLedsPerUniverse[0] != 0) {
+    for (uint8_t i = 0; i <= lastNonZeroValue; i++) {
+      uint16_t n = e131NumLedsPerUniverse[i];
+      if (n > 999) n = 999;
+      char numStr[4] = "";
+      snprintf(numStr, 4, "%d", n);
+      strlcat(temp_led_per_universe_str, numStr, E131_MAX_UNIVERSE_COUNT*4);
+      if (i != lastNonZeroValue) strlcat(temp_led_per_universe_str, ",", E131_MAX_UNIVERSE_COUNT*4);
+    }
+  }
+  strlcpy(e131NumLedsPerUniverseStr, temp_led_per_universe_str, E131_MAX_UNIVERSE_COUNT*4);
 }

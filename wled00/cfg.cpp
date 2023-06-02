@@ -414,6 +414,12 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
   if (e131Priority > 200) e131Priority = 200;
   CJSON(DMXMode, if_live_dmx["mode"]);
 
+  // Custom Led Num Per Universe
+  CJSON(e131CustomNumLedsPerUniverse, if_live_dmx[F("custom_led_num")]);
+  char tmp_e131NumLedsPerUniverseStr[E131_MAX_UNIVERSE_COUNT*4] = "";
+  getStringFromJson(tmp_e131NumLedsPerUniverseStr, if_live_dmx[F("custom_led_num_per_universe")], E131_MAX_UNIVERSE_COUNT*4);
+  parseLedPerUniverseString(tmp_e131NumLedsPerUniverseStr);
+
   tdd = if_live[F("timeout")] | -1;
   if (tdd >= 0) realtimeTimeoutMs = tdd * 100;
   CJSON(arlsForceMaxBri, if_live[F("maxbri")]);
@@ -863,6 +869,10 @@ void serializeConfig() {
   if_live_dmx[F("addr")] = DMXAddress;
   if_live_dmx[F("dss")] = DMXSegmentSpacing;
   if_live_dmx["mode"] = DMXMode;
+
+  // Custom Led Num Per Universe
+  if_live_dmx[F("custom_led_num")] = e131CustomNumLedsPerUniverse;
+  if_live_dmx[F("custom_led_num_per_universe")] = e131NumLedsPerUniverseStr;
 
   if_live[F("timeout")] = realtimeTimeoutMs / 100;
   if_live[F("maxbri")] = arlsForceMaxBri;

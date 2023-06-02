@@ -327,6 +327,15 @@ void handleSettingsSet(AsyncWebServerRequest *request, byte subPage)
     if (t >= 0  && t <= 200) e131Priority = t;
     t = request->arg(F("DM")).toInt();
     if (t >= DMX_MODE_DISABLED && t <= DMX_MODE_PRESET) DMXMode = t;
+
+    // Custom Led Num Per Universe
+    e131CustomNumLedsPerUniverse = request->hasArg(F("CU"));
+    if (request->hasArg(F("CN"))) {
+      parseLedPerUniverseString(request->arg(F("CN")).c_str());
+    } else {
+      parseLedPerUniverseString("");
+    }
+    
     t = request->arg(F("ET")).toInt();
     if (t > 99  && t <= 65000) realtimeTimeoutMs = t;
     arlsForceMaxBri = request->hasArg(F("FB"));
