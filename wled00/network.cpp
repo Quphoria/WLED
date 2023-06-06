@@ -127,7 +127,7 @@ const ethernet_settings ethernetBoards[] = {
 
   // esp32dancefloorcontroller_eth_oled
   {
-    0,			              // eth_address,
+    1,			              // eth_address,
     -1,			              // eth_power,
     16,			              // eth_mdc,
     18,			              // eth_mdio,

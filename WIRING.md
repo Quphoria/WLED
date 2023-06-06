@@ -10,7 +10,7 @@
 
 ## esp32dancefloorcontroller_eth_oled
 | -------------------------- | ------------ |
-| 0 (ADDRESS NOT GPIO)       | eth_address  |
+| 1 (ADDRESS NOT GPIO)       | eth_address  |
 | -1 (Use Internal Osc)      | eth_power    |
 | 16 (RX2)                   | eth_mdc      |
 | 18                         | eth_mdio     |
