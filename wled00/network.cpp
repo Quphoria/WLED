@@ -186,7 +186,7 @@ void WiFiEvent(WiFiEvent_t event)
       break;
       }
     case SYSTEM_EVENT_ETH_GOT_IP:
-      DEBUG_PRINT(F("ETH Disconnected"));
+      DEBUG_PRINT(F("ETH MAC: "));
       DEBUG_PRINT(ETH.macAddress());
       DEBUG_PRINT(F(", IPv4: "));
       DEBUG_PRINT(ETH.localIP());
