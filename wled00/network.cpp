@@ -199,6 +199,8 @@ void WiFiEvent(WiFiEvent_t event)
       break;
     case SYSTEM_EVENT_ETH_DISCONNECTED:
       DEBUG_PRINTLN(F("ETH Disconnected"));
+      // Fix bug with static IP addresses thinking ETH is connected when starting AP after ETH disconnect
+      ETH.config(IPAddress(0, 0, 0, 0), IPAddress(0, 0, 0, 0), IPAddress(0, 0, 0, 0));
       // This doesn't really affect ethernet per se,
       // as it's only configured once.  Rather, it
       // may be necessary to reconnect the WiFi when
@@ -208,6 +210,8 @@ void WiFiEvent(WiFiEvent_t event)
       break;
     case SYSTEM_EVENT_ETH_STOP:
       DEBUG_PRINTLN(F("ETH Stopped"));
+      // Fix bug with static IP addresses thinking ETH is connected when starting AP after ETH disconnect
+      ETH.config(IPAddress(0, 0, 0, 0), IPAddress(0, 0, 0, 0), IPAddress(0, 0, 0, 0));
       forceReconnect = true;
       break;
 #endif
