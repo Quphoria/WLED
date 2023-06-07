@@ -19,7 +19,7 @@
 
 ## Led Outputs
 | -- | ----- |
-| 12 | LED 1 |
+| 32 | LED 1 |
 | 13 | LED 2 |
 
 ## OLED
