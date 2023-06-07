@@ -185,6 +185,18 @@ void WiFiEvent(WiFiEvent_t event)
       showWelcomePage = false;
       break;
       }
+    case SYSTEM_EVENT_ETH_GOT_IP:
+      DEBUG_PRINT(F("ETH Disconnected"));
+      DEBUG_PRINT(ETH.macAddress());
+      DEBUG_PRINT(F(", IPv4: "));
+      DEBUG_PRINT(ETH.localIP());
+      if (ETH.fullDuplex()) {
+        DEBUG_PRINT(F(", FULL_DUPLEX"));
+      }
+      DEBUG_PRINT(F(", "));
+      DEBUG_PRINT(ETH.linkSpeed());
+      DEBUG_PRINTLN(F("Mbps"));
+      break;
     case SYSTEM_EVENT_ETH_DISCONNECTED:
       DEBUG_PRINTLN(F("ETH Disconnected"));
       // This doesn't really affect ethernet per se,
@@ -192,6 +204,10 @@ void WiFiEvent(WiFiEvent_t event)
       // may be necessary to reconnect the WiFi when
       // ethernet disconnects, as a way to provide
       // alternative access to the device.
+      forceReconnect = true;
+      break;
+    case SYSTEM_EVENT_ETH_STOP:
+      DEBUG_PRINTLN(F("ETH Stopped"));
       forceReconnect = true;
       break;
 #endif
