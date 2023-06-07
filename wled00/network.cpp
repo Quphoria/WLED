@@ -176,7 +176,7 @@ void WiFiEvent(WiFiEvent_t event)
       if (staticIP != (uint32_t)0x00000000 && staticGateway != (uint32_t)0x00000000) {
         ETH.config(staticIP, staticGateway, staticSubnet, IPAddress(8, 8, 8, 8));
       } else {
-        ETH.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
+        ETH.config(IPAddress(0, 0, 0, 0), IPAddress(0, 0, 0, 0), IPAddress(0, 0, 0, 0));
       }
       // convert the "serverDescription" into a valid DNS hostname (alphanumeric)
       char hostname[64];
