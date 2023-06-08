@@ -385,8 +385,10 @@ class FourLineDisplayUsermod : public Usermod {
       String line;
       // First row with Wifi name
       drawGlyph(0, 0, 80, u8x8_font_open_iconic_embedded_1x1); // home icon
+
       line = knownSsid.substring(0, getCols() > 1 ? getCols() - 2 : 0);
       center(line, getCols()-2);
+      for (byte i=1+line.length();i<getCols(); i++) line += ' '; // Clear screen after text
       drawString(1, 0, line.c_str());
       // Print `~` char to indicate that SSID is longer, than our display
       if (knownSsid.length() > (int)getCols()-1) {
@@ -397,7 +399,9 @@ class FourLineDisplayUsermod : public Usermod {
       drawGlyph(0, lineHeight, 68, u8x8_font_open_iconic_embedded_1x1); // wifi icon
       // Print password in AP mode and if led is OFF.
       if (apActive && bri == 0) {
-        drawString(1, lineHeight, apPass);
+        line = String(apPass);
+        for (byte i=1+line.length();i<getCols(); i++) line += ' '; // Clear screen after text
+        drawString(1, lineHeight, line.c_str());
       } else {
         // alternate IP address and server name
         line = knownIp.toString();
@@ -405,6 +409,7 @@ class FourLineDisplayUsermod : public Usermod {
           line = serverDescription;
         }
         center(line, getCols()-1);
+        for (byte i=1+line.length();i<getCols(); i++) line += ' '; // Clear screen after text
         drawString(1, lineHeight, line.c_str());
       }
 
